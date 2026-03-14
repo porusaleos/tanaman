@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alleos Development</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-seedling text-green-500 text-2xl"></i>
+                <h1 class="text-xl font-bold text-slate-800">Alleos Green</h1>
+            </div>
+            <div id="statusIndicator" class="badge badge-warning gap-2 py-3 px-4 text-xs font-bold shadow-sm">Connecting...</div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-10">
+        <div class="mb-10 text-center md:text-left">
+            <h2 class="text-4xl font-black text-slate-800 tracking-tight text-left">Halo, Alfie! </h2>
+            <p class="text-slate-500 font-medium text-left">Perumahan Citra Onyx Blok L No.176</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="card bg-white shadow-sm border border-slate-100 p-8">
+                <div class="flex justify-between items-start mb-4">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Kelembapan Tanah</p>
+                    <i class="fas fa-droplet text-blue-400 text-xl"></i>
+                </div>
+                <h3 class="text-5xl font-black text-slate-800" id="moistureVal">0%</h3>
+                <progress id="moistureBar" class="progress progress-info w-full h-3 mt-6" value="0" max="100"></progress>
+            </div>
+
+            <div class="card bg-white shadow-sm border border-slate-100 p-8">
+                <div class="flex justify-between items-start mb-4">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">WiFi</p>
+                    <div class="flex flex-col items-end text-indigo-400">
+                        <i class="fas fa-wifi text-xl"></i>
+                        <span id="ssidName" class="text-[10px] font-bold mt-1 text-slate-400">LUCIANO</span>
+                    </div>
+                </div>
+                <h3 class="text-5xl font-black text-slate-800" id="wifiVal">0%</h3>
+                <div class="mt-8 flex gap-1 items-end h-2">
+                    <div id="bar1" class="flex-1 bg-slate-100 rounded-full h-full"></div>
+                    <div id="bar2" class="flex-1 bg-slate-100 rounded-full h-full"></div>
+                    <div id="bar3" class="flex-1 bg-slate-100 rounded-full h-full"></div>
+                    <div id="bar4" class="flex-1 bg-slate-100 rounded-full h-full"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-white shadow-sm border border-slate-100 overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2">
+                <div class="p-8 border-b md:border-b-0 md:border-r border-slate-50 flex flex-col justify-center items-center">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Status Pompa</p>
+                    <h3 class="text-5xl font-black text-slate-800 uppercase tracking-tighter" id="pumpStatus">OFF</h3>
+                    <p class="text-xs text-slate-400 mt-4 italic">Terakhir disiram: <span id="lastTime">--:--</span></p>
+                </div>
+                <div class="p-8 bg-slate-50/50 flex flex-col gap-4">
+                    <button onclick="sendControl('ON')" class="btn btn-lg h-20 bg-emerald-500 hover:bg-emerald-600 border-none text-white rounded-2xl shadow-lg shadow-emerald-100 transition-all active:scale-95 font-black italic tracking-widest text-xl">START</button>
+                    <button onclick="sendControl('OFF')" class="btn btn-lg h-20 bg-rose-500 hover:bg-rose-600 border-none text-white rounded-2xl shadow-lg shadow-rose-100 transition-all active:scale-95 font-black italic tracking-widest text-xl">STOP</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSy...", 
+            authDomain: "bungabunda-4f817.firebaseapp.com",
+            databaseURL: "https://bungabunda-4f817-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "bungabunda-4f817",
+            storageBucket: "bungabunda-4f817.appspot.com",
+            messagingSenderId: "759284092991",
+            appId: "1:759284092991:web:..."
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        db.ref('.info/connected').on('value', (snap) => {
+            const ind = document.getElementById('statusIndicator');
+            if (snap.val() === true) {
+                ind.className = "badge badge-success gap-2 py-3 px-4 text-xs font-bold text-white border-none shadow-md shadow-green-100";
+                ind.innerHTML = `<span class="h-2 w-2 rounded-full bg-white animate-pulse"></span> ONLINE`;
+            }
+        });
+
+        db.ref('/').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                document.getElementById('moistureVal').innerText = (data.moisture || 0) + "%";
+                document.getElementById('moistureBar').value = data.moisture || 0;
+                document.getElementById('wifiVal').innerText = (data.wifiSignal || 0) + "%";
+                document.getElementById('pumpStatus').innerText = data.pumpStatus || "OFF";
+                document.getElementById('lastTime').innerText = data.lastTime || "--:--";
+                document.getElementById('ssidName').innerText = data.wifiName || "Disconnected";
+                
+                const pStatus = document.getElementById('pumpStatus');
+                pStatus.className = `text-5xl font-black uppercase tracking-tighter ${data.pumpStatus === 'ON' ? 'text-emerald-500 animate-pulse' : 'text-slate-800'}`;
+                
+                const wifi = data.wifiSignal || 0;
+                for(let i=1; i<=4; i++) {
+                    const bar = document.getElementById('bar' + i);
+                    bar.className = `flex-1 rounded-full h-full transition-all duration-700 ${wifi >= (i*25) ? 'bg-indigo-500' : 'bg-slate-100'}`;
+                }
+            }
+        });
+
+        function sendControl(command) {
+            const time = new Date();
+            const timeStr = time.getHours().toString().padStart(2, '0') + ":" + time.getMinutes().toString().padStart(2, '0');
+            db.ref('/').update({ 
+                pumpStatus: command, 
+                lastTime: (command === "ON") ? timeStr : document.getElementById('lastTime').innerText 
+            });
+        }
+    </script>
+</body>
+</html>
